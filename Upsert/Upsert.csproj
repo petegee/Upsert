@@ -6,4 +6,16 @@
         <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Eventuous" Version="0.14.0" />
+      <PackageReference Include="Eventuous.AspNetCore" Version="0.14.0" />
+      <PackageReference Include="Eventuous.AspNetCore.Web" Version="0.14.0" />
+      <PackageReference Include="Eventuous.EventStore" Version="0.14.0" />
+      <PackageReference Include="Eventuous.Projections.MongoDB" Version="0.14.0" />
+      <PackageReference Include="Serilog" Version="3.0.1" />
+      <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
+      <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+      <PackageReference Include="Serilog.AspNetCore" Version="6.1.0" />
+    </ItemGroup>
+
 </Project>
