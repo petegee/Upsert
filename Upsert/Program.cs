@@ -5,7 +5,6 @@ using Eventuous.EventStore;
 using Eventuous.EventStore.Subscriptions;
 using Eventuous.Projections.MongoDB;
 using Eventuous.Projections.MongoDB.Tools;
-using Eventuous.Subscriptions.Context;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using Serilog;
@@ -61,47 +60,46 @@ public class MyController : CommandHttpApiBase<MyAggregate>
 
 public class MyCommandService: CommandService<MyAggregate, MyAggregateState, MyAggregateId> {
     public MyCommandService(IAggregateStore store) : base(store) {
-        OnNew<UpsertIt>(
+        OnAny<UpsertIt>(
             cmd => new MyAggregateId(cmd.Name),
-            (agg, cmd) => agg.Upsert(cmd.Name, "insert", DateTimeOffset.Now));
-
-        // OnExisting<UpsertIt>(
-        //     cmd => new MyAggregateId(cmd.Name),
-        //     (agg, cmd) => agg.Upsert(cmd.Name, "updated", DateTimeOffset.Now));
+            (agg, cmd) => agg.Upsert(cmd.Name, DateTimeOffset.Now));
     }
 }
 
 public class MyProjection : MongoProjector<MyReadModel> {
     public MyProjection(IMongoDatabase database) : base(database) {
-        On<Upserted>(stream => stream.GetId(), HandleUpserted);
+        On<Upserted>(
+            stream => stream.GetId(),
+            (ctx, update) => update
+                .SetOnInsert(x => x.Id, ctx.Stream.GetId())
+                .Set(x => x.Timestamp, ctx.Message.Timestamp));
     }
-
-    private UpdateDefinition<MyReadModel> HandleUpserted(IMessageConsumeContext<Upserted> ctx, UpdateDefinitionBuilder<MyReadModel> update)
-        => update.SetOnInsert(x => x.Id, ctx.Stream.GetId())
-            .Set(x => x.Action, ctx.Message.Action)
-            .Set(x => x.Timestamp, ctx.Message.Timestamp);
 }
 
 public record UpsertIt(string Name);
+
 [EventType("Upserted")]
-public record Upserted(string Name, string Action, DateTimeOffset Timestamp);
+public record Upserted(string Name, DateTimeOffset Timestamp);
+
 public record MyAggregateId(string Value) : AggregateId(Value);
+
 public class MyAggregate : Aggregate<MyAggregateState> {
-    public void Upsert(string name, string action, DateTimeOffset now) {
-        Apply(new Upserted(name, action, now));
+    public void Upsert(string name, DateTimeOffset now) {
+        Apply(new Upserted(name, now));
     }
 }
+
 public record MyAggregateState : State<MyAggregateState> {
-    public string Name { get; init; }
-    public string Action { get; init; }
-    public DateTimeOffset Timestamp { get; init; }
+    public string Name { get; init; } = "";
+    public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.MinValue;
 }    
+
 public record MyReadModel : ProjectedDocument {
     public MyReadModel(string Id) : base(Id) {}
-    public string Name { get; init; }
-    public string Action{ get; init; }
-    public DateTimeOffset Timestamp{ get; init; }
+    public string Name { get; init; } = "";
+    public DateTimeOffset Timestamp{ get; init; } = DateTimeOffset.MinValue;
 }
+
 public static class Mongo {
     public static IMongoDatabase ConfigureMongo() {
         var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
@@ -109,3 +107,4 @@ public static class Mongo {
         return new MongoClient(settings).GetDatabase("Upsert");
     }
 }
+
