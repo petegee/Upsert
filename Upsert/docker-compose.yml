@@ -3,7 +3,7 @@ version: '3.5'
 services:
   eventstore:
     container_name: eventstore_local
-    image: eventstore/eventstore:20.10.2-buster-slim
+    image: eventstore/eventstore:23.10.0-bookworm-slim
     environment:
       - EVENTSTORE_CLUSTER_SIZE=1
       - EVENTSTORE_RUN_PROJECTIONS=All
